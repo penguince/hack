@@ -53,7 +53,7 @@ function App() {
     setError(null);
   }
 
-  const appName = import.meta.env.VITE_APP_NAME || "SkinSight Live";
+  const appName = import.meta.env.VITE_APP_NAME || "";
 
   return (
     <div className="app-container">

@@ -1,29 +1,25 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AnalyzeResponse } from "./types.js";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, ".env") });
+
+const geminiApiKey = process.env.GEMINI_API_KEY || "";
+const genAI = new GoogleGenerativeAI(geminiApiKey);
 
 export async function analyzeWithGemini(
   imageBase64: string,
   _roi?: any
 ): Promise<AnalyzeResponse> {
-  // If no API key, return a mock response
   if (!process.env.GEMINI_API_KEY) {
-    console.warn("⚠️  No GEMINI_API_KEY found. Returning mock response.");
-    return {
-      summary: "Looks like a mild inflammatory lesion with even borders.",
-      likely_categories: ["acne", "folliculitis"],
-      risk_level: "low",
-      next_steps: [
-        "Keep area clean",
-        "Avoid picking",
-        "Use OTC benzoyl peroxide 2.5%",
-      ],
-    };
+    return "no gemini api key found" as unknown as AnalyzeResponse;
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You are not a doctor. Give non-diagnostic guidance for a visible skin concern.
 
