@@ -27,6 +27,7 @@ Analyze this image and provide guidance in plain English. Return ONLY a valid JS
 {
   "summary": "1-2 sentence plain-English description of what you observe",
   "likely_categories": ["category1", "category2"],
+  "confidence_percentages": [65, 35],
   "risk_level": "low" or "medium" or "high",
   "next_steps": ["step 1", "step 2", "step 3"]
 }
@@ -34,9 +35,14 @@ Analyze this image and provide guidance in plain English. Return ONLY a valid JS
 Your approach:
 - Be warm, supportive, and reassuring
 - Use plain, friendly language (no medical jargon)
-- Provide 2-4 likely categories (e.g., acne, eczema, dry skin, rash)
+- Provide 2-4 likely categories (e.g., acne, eczema, dry skin, rash, healthy_skin)
+- For each category, provide a confidence percentage (0-100) showing how likely it is
+- CRITICAL: The confidence_percentages MUST add up to exactly 100 (e.g., [60, 30, 10] or [100] for single category)
+- confidence_percentages array must match the length of likely_categories array
+- If the skin appears perfectly healthy with no concerns, use ["healthy_skin"] with [100] confidence
 - Give 2-4 concrete, actionable next steps
-- Always include "Consult a dermatologist if it persists or worsens" as a next step
+- For healthy skin, suggest maintenance tips like "Continue your current skincare routine" or "Keep skin moisturized"
+- Always include "Consult a dermatologist if it persists or worsens" as a next step (unless skin is healthy)
 - DO NOT provide medical diagnoses - you're here to guide, not diagnose
 - Return ONLY valid JSON, no other text
 
@@ -62,11 +68,33 @@ Remember: You're a caring guide helping them understand their skin, not a doctor
     const parsed = JSON.parse(jsonMatch[0]);
 
     // Validate response structure
+    const categories = Array.isArray(parsed.likely_categories)
+      ? parsed.likely_categories
+      : ["unknown"];
+    
+    let confidences = Array.isArray(parsed.confidence_percentages)
+      ? parsed.confidence_percentages
+      : undefined;
+
+    // Normalize confidence percentages to add up to 100
+    if (confidences && confidences.length > 0) {
+      const sum = confidences.reduce((acc: number, val: number) => acc + val, 0);
+      if (sum !== 100 && sum > 0) {
+        // Normalize to 100
+        confidences = confidences.map((val: number) => Math.round((val / sum) * 100));
+        
+        // Adjust for rounding errors
+        const newSum = confidences.reduce((acc: number, val: number) => acc + val, 0);
+        if (newSum !== 100) {
+          confidences[0] += (100 - newSum);
+        }
+      }
+    }
+
     return {
       summary: parsed.summary || "Unable to analyze image",
-      likely_categories: Array.isArray(parsed.likely_categories)
-        ? parsed.likely_categories
-        : ["unknown"],
+      likely_categories: categories,
+      confidence_percentages: confidences,
       risk_level:
         parsed.risk_level === "low" ||
         parsed.risk_level === "medium" ||

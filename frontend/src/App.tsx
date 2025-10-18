@@ -95,24 +95,18 @@ function App() {
             <p className="app-subtitle">
               Privacy-first skin analysis. No storage required.
             </p>
-            <p className="opencv-info" style={{ marginTop: '12px', fontSize: '0.9em', color: '#666' }}>
-              ✨ Powered by OpenCV for enhanced image processing.
-            </p>
-            {!running ? (
-              <h1 className="app-instruction">
-                Choose option below to analyze.
-              </h1>
-            ) : (
-              <h1 className="app-instruction">
-                Camera Mode
-              </h1>
-            )}
           </header>
 
           <CameraView 
             running={running} 
             onGrabBase64={(g) => (grabRef.current = g)} 
           />
+
+          {!running && !result && !loading && (
+            <div className="hint-overlay">
+              <p>📸 Press "Start Camera" to take a picture, or "Upload Image" to use an existing photo</p>
+            </div>
+          )}
 
         <div className="controls">
           {!running ? (

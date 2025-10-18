@@ -225,42 +225,6 @@ app.post("/api/chat", async (req, res) => {
       console.log(`💭 Conversation history: ${conversationHistory.length} messages`);
     }
 
-    // Check quality of main image if provided
-    if (imageBase64) {
-      try {
-        const qualityResult = await callPythonService(imageBase64, "quality");
-        const qualityInfo = qualityResult.quality;
-        
-        if (qualityInfo && !qualityInfo.is_good_quality) {
-          console.warn(`❌ Chat image quality is poor - rejecting`);
-          return res.json({ 
-            message: "The image you uploaded has poor quality. Please upload a clearer image with better lighting and focus for accurate analysis."
-          });
-        }
-      } catch (error) {
-        console.warn("⚠️ Could not check image quality, proceeding anyway");
-      }
-    }
-
-    // Check quality of additional images if provided
-    if (additionalImages && additionalImages.length > 0) {
-      for (let i = 0; i < additionalImages.length; i++) {
-        try {
-          const qualityResult = await callPythonService(additionalImages[i], "quality");
-          const qualityInfo = qualityResult.quality;
-          
-          if (qualityInfo && !qualityInfo.is_good_quality) {
-            console.warn(`❌ Additional image ${i + 1} quality is poor - rejecting`);
-            return res.json({ 
-              message: `Image ${i + 1} has poor quality. Please upload clearer images with better lighting and focus for accurate analysis.`
-            });
-          }
-        } catch (error) {
-          console.warn(`⚠️ Could not check quality for additional image ${i + 1}, proceeding anyway`);
-        }
-      }
-    }
-
     const response = await chatWithGemini(
       message, 
       imageBase64 || undefined, 

@@ -25,9 +25,32 @@ export default function ResultCard({ data }: { data: AnalyzeResponse }) {
     <div className="result-card">
       <div className="result-header">Result</div>
       <p className="result-summary">{data.summary}</p>
+      
+      {/* Likely conditions with confidence percentages */}
       <div className="result-detail">
-        <strong>Likely:</strong> {data.likely_categories.join(", ")}
+        <strong>Likely Conditions:</strong>
+        {data.confidence_percentages && data.confidence_percentages.length === data.likely_categories.length ? (
+          <div className="conditions-list">
+            {data.likely_categories.map((category, i) => (
+              <div key={i} className="condition-item">
+                <div className="condition-label">
+                  <span className="condition-name">{category.replace(/_/g, ' ')}</span>
+                  <span className="condition-percentage">{data.confidence_percentages![i]}%</span>
+                </div>
+                <div className="confidence-bar-container">
+                  <div 
+                    className="confidence-bar" 
+                    style={{ width: `${data.confidence_percentages![i]}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span> {data.likely_categories.join(", ")}</span>
+        )}
       </div>
+      
       <div className="result-detail">
         <strong>Risk:</strong> <span className={`risk-${data.risk_level}`}>{data.risk_level}</span>
       </div>

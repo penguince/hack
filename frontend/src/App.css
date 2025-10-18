@@ -92,6 +92,68 @@ body {
   max-width: 80%;
 }
 
+.camera-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.placeholder-content {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  animation: fadeIn 0.5s ease-in;
+}
+
+.placeholder-content svg {
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+.placeholder-content p {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Hint Overlay */
+.hint-overlay {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 139, 250, 0.1));
+  border: 2px dashed rgba(139, 92, 246, 0.3);
+  border-radius: 0.75rem;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  animation: fadeIn 0.5s ease-in;
+}
+
+.hint-overlay p {
+  color: #6b21a8;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Controls */
 .controls {
   display: flex;
@@ -240,6 +302,57 @@ body {
   font-size: 0.875rem;
   color: #374151;
   margin-bottom: 0.5rem;
+}
+
+/* Confidence percentages */
+.conditions-list {
+  margin-top: 0.75rem;
+}
+
+.condition-item {
+  margin-bottom: 0.75rem;
+}
+
+.condition-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.condition-name {
+  font-weight: 500;
+  color: #374151;
+  text-transform: capitalize;
+}
+
+.condition-percentage {
+  font-weight: 600;
+  color: #8b5cf6;
+  font-size: 0.8rem;
+}
+
+.confidence-bar-container {
+  width: 100%;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.confidence-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  border-radius: 4px;
+  transition: width 0.6s ease-out;
+  animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+  }
 }
 
 .risk-low {
