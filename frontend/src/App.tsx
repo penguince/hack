@@ -144,7 +144,7 @@ function App() {
                 className="btn btn-end" 
                 onClick={end}
               >
-                End
+                Exit Camera Mode
               </button>
               <button
                 className="btn btn-analyze"
