@@ -9,6 +9,47 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8787;
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://localhost:8788";
+
+// Type definitions for Python service responses
+interface PythonServiceResponse {
+  processed_image?: string;
+  quality?: {
+    brightness: number;
+    contrast: number;
+    sharpness: number;
+    is_good_quality: boolean;
+  };
+  skin_mask?: string;
+  skin_percentage?: number;
+}
+
+// Helper function to call Python OpenCV service
+async function callPythonService(imageBase64: string, operation: string, params: any = {}): Promise<PythonServiceResponse> {
+  try {
+    console.log(`🐍 Calling Python service: ${operation}`);
+    const response = await fetch(`${PYTHON_SERVICE_URL}/process`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        imageBase64: imageBase64,
+        operation,
+        ...params,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Python service returned ${response.status}`);
+    }
+
+    return await response.json() as PythonServiceResponse;
+  } catch (error) {
+    console.error(`Python service error (${operation}):`, error);
+    throw error;
+  }
+}
 
 // Middleware
 app.use(cors());
@@ -52,6 +93,24 @@ app.get("/", (_req, res) => {
   });
 });
 
+// Python service health check
+app.get("/api/python-status", async (_req, res) => {
+  try {
+    const response = await fetch(`${PYTHON_SERVICE_URL}/`);
+    const data = await response.json();
+    res.json({
+      python_service: "connected",
+      details: data,
+    });
+  } catch (error: any) {
+    res.status(503).json({
+      python_service: "disconnected",
+      error: error.message,
+      note: "Make sure Python service is running on port 8788",
+    });
+  }
+});
+
 // Analysis endpoint
 app.post("/api/analyze", async (req, res) => {
   try {
@@ -67,12 +126,58 @@ app.post("/api/analyze", async (req, res) => {
 
     console.log(`📸 Analyzing image (${imageBase64.length} bytes)...`);
 
-    // Call Gemini Vision API
-    const data = await analyzeWithGemini(imageBase64, roi);
+    let processedImage = imageBase64;
+    let qualityInfo = null;
+
+    try {
+      // Analyze image quality using Python service
+      const qualityResult = await callPythonService(imageBase64, "quality");
+      qualityInfo = qualityResult.quality || null;
+      
+      if (qualityInfo) {
+        console.log(`📊 Image quality: brightness=${qualityInfo.brightness.toFixed(2)}, contrast=${qualityInfo.contrast.toFixed(2)}, sharpness=${qualityInfo.sharpness.toFixed(2)}`);
+
+        if (!qualityInfo.is_good_quality) {
+          console.warn(`⚠️  Image quality may be suboptimal for analysis`);
+        }
+      }
+
+      // Extract ROI if specified using Python service
+      if (roi) {
+        console.log(`✂️  Extracting ROI: x=${roi.x}, y=${roi.y}, w=${roi.w}, h=${roi.h}`);
+        const roiResult = await callPythonService(imageBase64, "roi", {
+          x: roi.x,
+          y: roi.y,
+          width: roi.w,
+          height: roi.h,
+        });
+        if (roiResult.processed_image) {
+          processedImage = roiResult.processed_image;
+        }
+      }
+
+      // Preprocess image for better analysis using Python service
+      console.log(`🔧 Preprocessing image with OpenCV...`);
+      const preprocessResult = await callPythonService(processedImage, "preprocess");
+      if (preprocessResult.processed_image) {
+        processedImage = preprocessResult.processed_image;
+        console.log(`✅ Image preprocessed successfully with Python OpenCV`);
+      }
+    } catch (cvError) {
+      console.error("⚠️  Python OpenCV processing failed, using original image:", cvError);
+      processedImage = imageBase64;
+    }
+
+    // Call Gemini Vision API with processed image
+    const data = await analyzeWithGemini(processedImage, roi);
 
     console.log(`✅ Analysis complete: ${data.risk_level} risk`);
 
-    return res.json(data);
+    // Include quality information in response
+    return res.json({
+      ...data,
+      imageQuality: qualityInfo,
+    });
   } catch (e: any) {
     console.error("❌ Analysis error:", e);
 
@@ -132,13 +237,95 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// Image processing endpoint
+app.post("/api/process-image", async (req, res) => {
+  try {
+    const { imageBase64, operation } = z.object({
+      imageBase64: z.string(),
+      operation: z.enum(["edges", "preprocess", "quality", "contrast", "skin"]),
+    }).parse(req.body);
+
+    console.log(`🔧 Processing image with operation: ${operation} via Python OpenCV`);
+
+    let result: any;
+
+    try {
+      const pythonResult = await callPythonService(imageBase64, operation);
+      
+      switch (operation) {
+        case "edges":
+          result = { 
+            processedImage: pythonResult.processed_image, 
+            operation: "edges" 
+          };
+          break;
+        
+        case "preprocess":
+          result = { 
+            processedImage: pythonResult.processed_image, 
+            operation: "preprocess" 
+          };
+          break;
+        
+        case "quality":
+          result = { 
+            quality: pythonResult.quality, 
+            operation: "quality" 
+          };
+          break;
+        
+        case "contrast":
+          result = { 
+            processedImage: pythonResult.processed_image, 
+            operation: "contrast" 
+          };
+          break;
+        
+        case "skin":
+          result = { 
+            processedImage: pythonResult.processed_image,
+            skinMask: pythonResult.skin_mask,
+            skinPercentage: pythonResult.skin_percentage,
+            operation: "skin" 
+          };
+          break;
+        
+        default:
+          throw new Error("Invalid operation");
+      }
+
+      console.log(`✅ Image processing complete via Python OpenCV`);
+      return res.json(result);
+    } catch (pythonError: any) {
+      console.error("❌ Python service error:", pythonError);
+      return res.status(503).json({
+        error: "Python OpenCV service unavailable",
+        details: pythonError.message,
+      });
+    }
+  } catch (e: any) {
+    console.error("❌ Image processing error:", e);
+
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({
+        error: "Invalid request format",
+        details: e.errors,
+      });
+    }
+
+    return res.status(500).json({
+      error: e.message ?? "Image processing failed. Please try again.",
+    });
+  }
+});
+
 // 404 handler
 app.use((_req, res) => {
   res.status(404).json({ error: "Endpoint not found" });
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n🚀 SkinSight Live API running on http://localhost:${PORT}`);
   console.log(
     `📡 Ready to receive requests at http://localhost:${PORT}/api/analyze\n`
@@ -148,5 +335,16 @@ app.listen(PORT, () => {
     console.warn(
       "⚠️  WARNING: GEMINI_API_KEY not set. Using mock responses.\n"
     );
+  }
+
+  // Check Python service connectivity
+  try {
+    const response = await fetch(`${PYTHON_SERVICE_URL}/`);
+    const data = await response.json() as any;
+    console.log(`✅ Python OpenCV service connected: ${data.service} v${data.version}`);
+    console.log(`   Available at: ${PYTHON_SERVICE_URL}\n`);
+  } catch (error) {
+    console.warn(`⚠️  WARNING: Python OpenCV service not available at ${PYTHON_SERVICE_URL}`);
+    console.warn(`   Please start it with: cd backend/python_service && python app.py\n`);
   }
 });

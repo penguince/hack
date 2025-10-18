@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCV Test</title>
+</head>
+<body>
+    <h1>OpenCV.js Loading Test</h1>
+    <div id="status">Loading...</div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        // Try to load OpenCV
+        const script = document.createElement('script');
+        script.src = '/opencv.js';
+        
+        script.onload = () => {
+            statusDiv.innerHTML = 'Script loaded, waiting for initialization...';
+            
+            if (typeof cv !== 'undefined') {
+                cv.onRuntimeInitialized = () => {
+                    statusDiv.innerHTML = '✅ OpenCV.js loaded successfully!<br>';
+                    statusDiv.innerHTML += 'OpenCV version: ' + cv.getBuildInformation();
+                    console.log('OpenCV loaded:', cv);
+                };
+            } else {
+                statusDiv.innerHTML = '❌ cv object not found after script load';
+            }
+        };
+        
+        script.onerror = (error) => {
+            statusDiv.innerHTML = '❌ Failed to load opencv.js';
+            console.error('Error loading OpenCV:', error);
+        };
+        
+        document.body.appendChild(script);
+        
+        // Timeout check
+        setTimeout(() => {
+            if (statusDiv.innerHTML === 'Loading...') {
+                statusDiv.innerHTML = '⏱️ Timeout: OpenCV did not load in 10 seconds';
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

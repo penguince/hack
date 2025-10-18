@@ -95,12 +95,15 @@ function App() {
             <p className="app-subtitle">
               Privacy-first, text-only skin check. No storage.
             </p>
+            <p className="opencv-info" style={{ marginTop: '12px', fontSize: '0.9em', color: '#666' }}>
+              ✨ Powered by Python OpenCV for enhanced image processing
+            </p>
           </header>
 
-        <CameraView 
-          running={running} 
-          onGrabBase64={(g) => (grabRef.current = g)} 
-        />
+          <CameraView 
+            running={running} 
+            onGrabBase64={(g) => (grabRef.current = g)} 
+          />
 
         <div className="controls">
           {!running ? (
