@@ -1,6 +1,7 @@
 export type AnalyzeRequest = {
   imageBase64: string; // JPEG base64 (downscaled)
   roi?: { x: number; y: number; w: number; h: number };
+  source?: "camera" | "upload"; // where the image came from
 };
 
 export type AnalyzeResponse = {

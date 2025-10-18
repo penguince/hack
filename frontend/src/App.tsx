@@ -14,7 +14,7 @@ function App() {
   const grabRef = useRef<() => string>(() => "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function analyzeImage(imageBase64: string) {
+  async function analyzeImage(imageBase64: string, source: "camera" | "upload" = "camera") {
     setCurrentImage(imageBase64);
     setLoading(true);
     setResult(null);
@@ -24,7 +24,7 @@ function App() {
       const r = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64 }),
+        body: JSON.stringify({ imageBase64, source }),
       });
 
       const data = await r.json();
@@ -69,7 +69,7 @@ function App() {
       const base64 = e.target?.result as string;
       // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
       const base64Data = base64.split(',')[1];
-      await analyzeImage(base64Data);
+      await analyzeImage(base64Data, "upload");
     };
     reader.onerror = () => {
       setError("Failed to read image file.");

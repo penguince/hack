@@ -66,6 +66,7 @@ const ReqSchema = z.object({
       h: z.number(),
     })
     .optional(),
+  source: z.enum(["camera", "upload"]).optional(),
 });
 
 const ChatSchema = z.object({
@@ -115,7 +116,7 @@ app.get("/api/python-status", async (_req, res) => {
 app.post("/api/analyze", async (req, res) => {
   try {
     // Validate request body
-    const { imageBase64, roi } = ReqSchema.parse(req.body);
+    const { imageBase64, roi, source } = ReqSchema.parse(req.body);
 
     // Hard budget: reject huge payloads (roughly ~1.5MB base64)
     if (imageBase64.length > 1_400_000) {
@@ -124,7 +125,7 @@ app.post("/api/analyze", async (req, res) => {
       });
     }
 
-    console.log(`📸 Analyzing image (${imageBase64.length} bytes)...`);
+    console.log(`📸 Analyzing image (${imageBase64.length} bytes) from ${source || 'unknown'}...`);
 
     let processedImage = imageBase64;
     let qualityInfo = null;
@@ -137,9 +138,9 @@ app.post("/api/analyze", async (req, res) => {
       if (qualityInfo) {
         console.log(`📊 Image quality: brightness=${qualityInfo.brightness}, contrast=${qualityInfo.contrast}, sharpness=${qualityInfo.sharpness}`);
 
-        // Check if image quality is poor
-        if (!qualityInfo.is_good_quality) {
-          console.warn(`❌ Image quality is poor - rejecting analysis`);
+        // Only validate quality for camera images, not uploaded files
+        if (source === "camera" && !qualityInfo.is_good_quality) {
+          console.warn(`❌ Camera image quality is poor - rejecting analysis`);
           
           // Return static response without calling Gemini
           return res.json({
@@ -154,6 +155,8 @@ app.post("/api/analyze", async (req, res) => {
             ],
             imageQuality: qualityInfo,
           });
+        } else if (source === "upload") {
+          console.log(`✅ File upload - skipping quality validation`);
         }
       }
 
