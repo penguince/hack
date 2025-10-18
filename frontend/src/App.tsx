@@ -93,11 +93,20 @@ function App() {
           <header className="app-header">
             <h1>{appName}</h1>
             <p className="app-subtitle">
-              Privacy-first, text-only skin check. No storage.
+              Privacy-first skin analysis. No storage required.
             </p>
             <p className="opencv-info" style={{ marginTop: '12px', fontSize: '0.9em', color: '#666' }}>
-              ✨ Powered by Python OpenCV for enhanced image processing
+              ✨ Powered by OpenCV for enhanced image processing.
             </p>
+            {!running ? (
+              <h1 className="app-instruction">
+                Choose option below to analyze.
+              </h1>
+            ) : (
+              <h1 className="app-instruction">
+                Camera Mode
+              </h1>
+            )}
           </header>
 
           <CameraView 
@@ -135,7 +144,7 @@ function App() {
                 className="btn btn-end" 
                 onClick={end}
               >
-                End
+                Exit Camera Mode
               </button>
               <button
                 className="btn btn-analyze"

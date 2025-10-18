@@ -40,7 +40,7 @@ export default function ResultCard({ data }: { data: AnalyzeResponse }) {
         </ul>
       </div>
       <p className="result-disclaimer">
-        Informational only—this is not a diagnosis. Consult a clinician for concerns.
+        Informational purposes only. Not a diagnosis. Consult a dermatologist for concerns.
       </p>
     </div>
   );
