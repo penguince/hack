@@ -1,4 +1,4 @@
-# SkinSight Live
+# Skinalyze Live
 
 Real-time skin analysis using AI. Camera → Analyze → Get instant feedback.
 
@@ -71,3 +71,9 @@ hack/
 ---
 
 **Privacy First**: No data is stored. Everything happens in memory.
+
+todo:
+1. Chatbot
+2. File Upload
+3. Landing page 
+4. OpenCV

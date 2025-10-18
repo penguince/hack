@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import CameraView from "./components/CameraView";
 import ResultCard from "./components/ResultCard";
+import ChatPanel from "./components/ChatPanel";
 import type { AnalyzeResponse } from "./lib/types";
 import "./App.css";
 
@@ -9,6 +10,7 @@ function App() {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
   const grabRef = useRef<() => string>(() => "");
 
   async function analyzeOnce() {
@@ -20,6 +22,7 @@ function App() {
       return;
     }
 
+    setCurrentImage(imageBase64);
     setLoading(true);
     setResult(null);
     setError(null);
@@ -50,6 +53,7 @@ function App() {
   function end() {
     setRunning(false);
     setResult(null);
+    setCurrentImage(null);
     setError(null);
   }
 
@@ -57,13 +61,14 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="content-wrapper">
-        <header className="app-header">
-          <h1>{appName}</h1>
-          <p className="app-subtitle">
-            Privacy-first, text-only skin check. No storage.
-          </p>
-        </header>
+      <div className="main-content">
+        <div className="content-wrapper">
+          <header className="app-header">
+            <h1>{appName}</h1>
+            <p className="app-subtitle">
+              Privacy-first, text-only skin check. No storage.
+            </p>
+          </header>
 
         <CameraView 
           running={running} 
@@ -109,7 +114,15 @@ function App() {
         )}
 
         {result && <ResultCard data={result} />}
+        </div>
       </div>
+      
+      <aside className="chat-sidebar">
+        <ChatPanel 
+          analysisResult={result}
+          imageBase64={currentImage}
+        />
+      </aside>
     </div>
   );
 }

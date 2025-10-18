@@ -90,3 +90,73 @@ Rules:
     };
   }
 }
+
+export async function chatWithGemini(
+  message: string,
+  imageBase64?: string,
+  analysisContext?: {
+    summary: string;
+    likely_categories: string[];
+    risk_level: "low" | "medium" | "high";
+    next_steps: string[];
+  }
+): Promise<string> {
+  if (!process.env.GEMINI_API_KEY) {
+    return "Sorry, the chat service is currently unavailable. Please check your API key configuration.";
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    let systemPrompt = `You are a helpful, friendly skin care assistant. Provide informative, concise answers about:
+- General skin care advice
+- Common skin conditions (informational only)
+- Skin care product types and ingredients
+- Daily routines and habits for healthy skin
+
+Important guidelines:
+- Keep responses under 200 words
+- Use friendly, conversational tone
+- DO NOT provide medical diagnoses
+- DO NOT prescribe treatments
+- Always recommend consulting a dermatologist for specific concerns
+- Be supportive and reassuring
+- Avoid technical medical jargon
+`;
+
+    // Add image context if available
+    if (analysisContext) {
+      systemPrompt += `\n\nCONTEXT: The user has analyzed an image with the following results:
+- Summary: ${analysisContext.summary}
+- Possible categories: ${analysisContext.likely_categories.join(", ")}
+- Risk level: ${analysisContext.risk_level}
+- Suggested next steps: ${analysisContext.next_steps.join("; ")}
+
+You can reference this analysis when answering the user's questions. If they ask about the image or "this", refer to this context.
+`;
+    }
+
+    systemPrompt += `\n\nUser question: ${message}`;
+
+    // If we have an image, include it in the request
+    const contentParts: any[] = [systemPrompt];
+    
+    if (imageBase64 && analysisContext) {
+      contentParts.push({
+        inlineData: {
+          data: imageBase64,
+          mimeType: "image/jpeg",
+        },
+      });
+    }
+
+    const result = await model.generateContent(contentParts);
+    const response = await result.response;
+    const text = response.text();
+
+    return text.trim();
+  } catch (error) {
+    console.error("Gemini chat error:", error);
+    return "I'm having trouble responding right now. Please try asking again in a moment.";
+  }
+}

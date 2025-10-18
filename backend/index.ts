@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { z } from "zod";
-import { analyzeWithGemini } from "./gemini.js";
+import { analyzeWithGemini, chatWithGemini } from "./gemini.js";
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +25,17 @@ const ReqSchema = z.object({
       h: z.number(),
     })
     .optional(),
+});
+
+const ChatSchema = z.object({
+  message: z.string().min(1, "Message cannot be empty").max(1000, "Message too long"),
+  imageBase64: z.string().optional(),
+  analysisContext: z.object({
+    summary: z.string(),
+    likely_categories: z.array(z.string()),
+    risk_level: z.enum(["low", "medium", "high"]),
+    next_steps: z.array(z.string()),
+  }).optional(),
 });
 
 // Health check endpoint
@@ -69,6 +80,37 @@ app.post("/api/analyze", async (req, res) => {
 
     return res.status(500).json({
       error: e.message ?? "Internal server error. Please try again.",
+    });
+  }
+});
+
+// Chat endpoint
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { message, imageBase64, analysisContext } = ChatSchema.parse(req.body);
+
+    console.log(`💬 Chat message received: ${message.substring(0, 50)}...`);
+    if (imageBase64) {
+      console.log(`📸 Image context included (${imageBase64.length} bytes)`);
+    }
+
+    const response = await chatWithGemini(message, imageBase64, analysisContext);
+
+    console.log(`✅ Chat response sent`);
+
+    return res.json({ message: response });
+  } catch (e: any) {
+    console.error("❌ Chat error:", e);
+
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({
+        error: "Invalid message format",
+        details: e.errors,
+      });
+    }
+
+    return res.status(500).json({
+      error: "Failed to process chat message. Please try again.",
     });
   }
 });
