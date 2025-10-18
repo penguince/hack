@@ -135,10 +135,25 @@ app.post("/api/analyze", async (req, res) => {
       qualityInfo = qualityResult.quality || null;
       
       if (qualityInfo) {
-        console.log(`📊 Image quality: brightness=${qualityInfo.brightness.toFixed(2)}, contrast=${qualityInfo.contrast.toFixed(2)}, sharpness=${qualityInfo.sharpness.toFixed(2)}`);
+        console.log(`📊 Image quality: brightness=${qualityInfo.brightness}, contrast=${qualityInfo.contrast}, sharpness=${qualityInfo.sharpness}`);
 
+        // Check if image quality is poor
         if (!qualityInfo.is_good_quality) {
-          console.warn(`⚠️  Image quality may be suboptimal for analysis`);
+          console.warn(`❌ Image quality is poor - rejecting analysis`);
+          
+          // Return static response without calling Gemini
+          return res.json({
+            summary: "Image quality is too poor for accurate analysis. Please retake the photo with better lighting and focus.",
+            likely_categories: ["poor_image_quality"],
+            risk_level: "low",
+            next_steps: [
+              "Ensure good lighting (natural light works best)",
+              "Hold camera steady to avoid blur",
+              "Make sure the area is in focus",
+              "Try again with a clearer image"
+            ],
+            imageQuality: qualityInfo,
+          });
         }
       }
 
@@ -208,6 +223,42 @@ app.post("/api/chat", async (req, res) => {
     }
     if (conversationHistory && conversationHistory.length > 0) {
       console.log(`💭 Conversation history: ${conversationHistory.length} messages`);
+    }
+
+    // Check quality of main image if provided
+    if (imageBase64) {
+      try {
+        const qualityResult = await callPythonService(imageBase64, "quality");
+        const qualityInfo = qualityResult.quality;
+        
+        if (qualityInfo && !qualityInfo.is_good_quality) {
+          console.warn(`❌ Chat image quality is poor - rejecting`);
+          return res.json({ 
+            message: "The image you uploaded has poor quality. Please upload a clearer image with better lighting and focus for accurate analysis."
+          });
+        }
+      } catch (error) {
+        console.warn("⚠️ Could not check image quality, proceeding anyway");
+      }
+    }
+
+    // Check quality of additional images if provided
+    if (additionalImages && additionalImages.length > 0) {
+      for (let i = 0; i < additionalImages.length; i++) {
+        try {
+          const qualityResult = await callPythonService(additionalImages[i], "quality");
+          const qualityInfo = qualityResult.quality;
+          
+          if (qualityInfo && !qualityInfo.is_good_quality) {
+            console.warn(`❌ Additional image ${i + 1} quality is poor - rejecting`);
+            return res.json({ 
+              message: `Image ${i + 1} has poor quality. Please upload clearer images with better lighting and focus for accurate analysis.`
+            });
+          }
+        } catch (error) {
+          console.warn(`⚠️ Could not check quality for additional image ${i + 1}, proceeding anyway`);
+        }
+      }
     }
 
     const response = await chatWithGemini(

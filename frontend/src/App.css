@@ -204,6 +204,22 @@ body {
   margin-top: 1rem;
 }
 
+.result-card-warning {
+  background: #fffbeb;
+  border: 2px solid #fbbf24;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
+}
+
+.result-card-warning .result-header {
+  color: #92400e;
+  font-size: 1rem;
+}
+
+.result-card-warning .result-summary {
+  color: #92400e;
+  font-weight: 500;
+}
+
 .result-header {
   font-size: 0.75rem;
   font-weight: 700;

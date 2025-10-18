@@ -117,7 +117,7 @@ def analyze_quality(base64_string: str) -> Dict:
         'brightness': int(brightness),
         'contrast': int(contrast),
         'sharpness': int(sharpness),
-        'isGoodQuality': is_good
+        'is_good_quality': is_good
     }
     
     print(f"Quality analysis: {quality_info}")

@@ -43,10 +43,17 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
     if (analysisResult && imageBase64 && imageBase64 !== lastImageRef.current) {
       lastImageRef.current = imageBase64;
       
+      // Skip automatic message if image quality is poor
+      const isPoorQuality = analysisResult.likely_categories.includes("poor_image_quality");
+      if (isPoorQuality) {
+        console.log("Skipping chat notification - poor image quality");
+        return;
+      }
+      
       const contextMessage: Message = {
         id: `analysis-context-${Date.now()}`,
         role: "assistant",
-        content: `I've analyzed your image. Here's what I see: ${analysisResult.summary}\n\nRisk level: ${analysisResult.risk_level}\nLikely categories: ${analysisResult.likely_categories.join(", ")}\n\nWhat would you like to know more about?`,
+        content: `📸 I can see your image and have analyzed it. Feel free to ask me any questions about what you see in the results!`,
         timestamp: new Date(),
       };
       
