@@ -137,5 +137,6 @@ todo:
 1. Chatbot ✅
 2. File Upload ✅
 3. Landing page 
-4. OpenCV 
+4. OpenCV ✅
 5. prompt tune
+6. deploy (optional)
