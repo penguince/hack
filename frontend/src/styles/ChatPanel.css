@@ -150,6 +150,36 @@
   padding: 1rem;
   background: white;
   border-top: 1px solid #e5e7eb;
+  align-items: flex-end;
+}
+
+.chat-attach-btn {
+  padding: 0.75rem;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.chat-attach-btn svg {
+  display: block;
+}
+
+.chat-attach-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+  transform: scale(1.1);
+  color: #374151;
+}
+
+.chat-attach-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .chat-input {
@@ -195,6 +225,33 @@
 .chat-send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.uploaded-images-indicator {
+  padding: 0.5rem 1rem;
+  background: #f0f9ff;
+  border-top: 1px solid #bae6fd;
+  font-size: 0.75rem;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.clear-images-btn {
+  background: none;
+  border: none;
+  color: #0369a1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.clear-images-btn:hover {
+  color: #dc2626;
+  transform: scale(1.2);
 }
 
 .chat-disclaimer {

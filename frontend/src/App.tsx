@@ -12,16 +12,9 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const grabRef = useRef<() => string>(() => "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function analyzeOnce() {
-    if (!running || !grabRef.current) return;
-    
-    const imageBase64 = grabRef.current();
-    if (!imageBase64) {
-      setError("Failed to capture frame. Please try again.");
-      return;
-    }
-
+  async function analyzeImage(imageBase64: string) {
     setCurrentImage(imageBase64);
     setLoading(true);
     setResult(null);
@@ -48,6 +41,40 @@ function App() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function analyzeOnce() {
+    if (!running || !grabRef.current) return;
+    
+    const imageBase64 = grabRef.current();
+    if (!imageBase64) {
+      setError("Failed to capture frame. Please try again.");
+      return;
+    }
+
+    await analyzeImage(imageBase64);
+  }
+
+  function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError("Please upload an image file.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target?.result as string;
+      // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
+      const base64Data = base64.split(',')[1];
+      await analyzeImage(base64Data);
+    };
+    reader.onerror = () => {
+      setError("Failed to read image file.");
+    };
+    reader.readAsDataURL(file);
   }
 
   function end() {
@@ -77,27 +104,45 @@ function App() {
 
         <div className="controls">
           {!running ? (
-            <button 
-              className="btn btn-start" 
-              onClick={() => setRunning(true)}
-            >
-              Start
-            </button>
+            <>
+              <button 
+                className="btn btn-start" 
+                onClick={() => setRunning(true)}
+              >
+                Start Camera
+              </button>
+              <button 
+                className="btn btn-upload" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+              >
+                Upload Image
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+              />
+            </>
           ) : (
-            <button 
-              className="btn btn-end" 
-              onClick={end}
-            >
-              End
-            </button>
+            <>
+              <button 
+                className="btn btn-end" 
+                onClick={end}
+              >
+                End
+              </button>
+              <button
+                className="btn btn-analyze"
+                onClick={analyzeOnce}
+                disabled={!running || loading}
+              >
+                {loading ? "Analyzing…" : "Analyze"}
+              </button>
+            </>
           )}
-          <button
-            className="btn btn-analyze"
-            onClick={analyzeOnce}
-            disabled={!running || loading}
-          >
-            {loading ? "Analyzing…" : "Analyze"}
-          </button>
         </div>
 
         {error && (

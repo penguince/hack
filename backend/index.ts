@@ -29,13 +29,18 @@ const ReqSchema = z.object({
 
 const ChatSchema = z.object({
   message: z.string().min(1, "Message cannot be empty").max(1000, "Message too long"),
-  imageBase64: z.string().optional(),
+  imageBase64: z.string().nullable().optional(),
   analysisContext: z.object({
     summary: z.string(),
     likely_categories: z.array(z.string()),
     risk_level: z.enum(["low", "medium", "high"]),
     next_steps: z.array(z.string()),
-  }).optional(),
+  }).nullable().optional(),
+  additionalImages: z.array(z.string()).optional(),
+  conversationHistory: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string(),
+  })).optional(),
 });
 
 // Health check endpoint
@@ -87,14 +92,26 @@ app.post("/api/analyze", async (req, res) => {
 // Chat endpoint
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, imageBase64, analysisContext } = ChatSchema.parse(req.body);
+    const { message, imageBase64, analysisContext, additionalImages, conversationHistory } = ChatSchema.parse(req.body);
 
     console.log(`💬 Chat message received: ${message.substring(0, 50)}...`);
     if (imageBase64) {
       console.log(`📸 Image context included (${imageBase64.length} bytes)`);
     }
+    if (additionalImages && additionalImages.length > 0) {
+      console.log(`📎 ${additionalImages.length} additional image(s) included`);
+    }
+    if (conversationHistory && conversationHistory.length > 0) {
+      console.log(`💭 Conversation history: ${conversationHistory.length} messages`);
+    }
 
-    const response = await chatWithGemini(message, imageBase64, analysisContext);
+    const response = await chatWithGemini(
+      message, 
+      imageBase64 || undefined, 
+      analysisContext || undefined, 
+      additionalImages,
+      conversationHistory
+    );
 
     console.log(`✅ Chat response sent`);
 

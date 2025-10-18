@@ -21,9 +21,9 @@ export async function analyzeWithGemini(
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const prompt = `You are not a doctor. Give non-diagnostic guidance for a visible skin concern.
+    const prompt = `You are a friendly, supportive skin care assistant who helps people understand their skin better.
 
-Analyze this image and return ONLY a valid JSON object with this exact structure:
+Analyze this image and provide guidance in plain English. Return ONLY a valid JSON object with this exact structure:
 {
   "summary": "1-2 sentence plain-English description of what you observe",
   "likely_categories": ["category1", "category2"],
@@ -31,13 +31,16 @@ Analyze this image and return ONLY a valid JSON object with this exact structure
   "next_steps": ["step 1", "step 2", "step 3"]
 }
 
-Rules:
-- Be concise and respectful
-- Use plain language, no medical jargon
+Your approach:
+- Be warm, supportive, and reassuring
+- Use plain, friendly language (no medical jargon)
 - Provide 2-4 likely categories (e.g., acne, eczema, dry skin, rash)
 - Give 2-4 concrete, actionable next steps
 - Always include "Consult a dermatologist if it persists or worsens" as a next step
-- Return ONLY valid JSON, no other text`;
+- DO NOT provide medical diagnoses - you're here to guide, not diagnose
+- Return ONLY valid JSON, no other text
+
+Remember: You're a caring guide helping them understand their skin, not a doctor making diagnoses.`;
 
     const imagePart = {
       inlineData: {
@@ -99,7 +102,9 @@ export async function chatWithGemini(
     likely_categories: string[];
     risk_level: "low" | "medium" | "high";
     next_steps: string[];
-  }
+  },
+  additionalImages?: string[],
+  conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
 ): Promise<string> {
   if (!process.env.GEMINI_API_KEY) {
     return "Sorry, the chat service is currently unavailable. Please check your API key configuration.";
@@ -108,45 +113,79 @@ export async function chatWithGemini(
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    let systemPrompt = `You are a helpful, friendly skin care assistant. Provide informative, concise answers about:
-- General skin care advice
-- Common skin conditions (informational only)
-- Skin care product types and ingredients
-- Daily routines and habits for healthy skin
+    let systemPrompt = `You are a friendly, supportive skin care assistant who helps people understand and care for their skin.
 
-Important guidelines:
-- Keep responses under 200 words
-- Use friendly, conversational tone
-- DO NOT provide medical diagnoses
+Your personality:
+- Warm, caring, and reassuring
+- Knowledgeable but approachable
+- Use plain, conversational language
+- Supportive guide, not a medical professional
+
+You help with:
+- Understanding skin conditions and concerns
+- General skin care advice and routines
+- Product types and ingredients guidance
+- Daily habits for healthy skin
+- Answering follow-up questions about analyzed images
+
+Your approach:
+- Stay concise and on point (under 200 words)
+- Be encouraging and reassuring
+- Reference previous conversation naturally
+- Connect your analysis with follow-up questions
+- DO NOT diagnose medical conditions
 - DO NOT prescribe treatments
-- Always recommend consulting a dermatologist for specific concerns
-- Be supportive and reassuring
-- Avoid technical medical jargon
+- Always recommend consulting a dermatologist for persistent concerns
+
+Remember: You just analyzed their image (if applicable) and now you're here to answer their questions as a caring, consistent guide.
 `;
+
+    // Add conversation history for context continuity
+    if (conversationHistory && conversationHistory.length > 0) {
+      systemPrompt += `\n\nPREVIOUS CONVERSATION:`;
+      conversationHistory.forEach((msg) => {
+        const speaker = msg.role === "user" ? "User" : "You";
+        systemPrompt += `\n${speaker}: ${msg.content}`;
+      });
+      systemPrompt += `\n---\n`;
+    }
 
     // Add image context if available
     if (analysisContext) {
-      systemPrompt += `\n\nCONTEXT: The user has analyzed an image with the following results:
+      systemPrompt += `\nYour earlier analysis of their image:
 - Summary: ${analysisContext.summary}
 - Possible categories: ${analysisContext.likely_categories.join(", ")}
 - Risk level: ${analysisContext.risk_level}
 - Suggested next steps: ${analysisContext.next_steps.join("; ")}
 
-You can reference this analysis when answering the user's questions. If they ask about the image or "this", refer to this context.
+Reference this naturally when they ask about "it", "this", "the image", or their skin concern.
 `;
     }
 
-    systemPrompt += `\n\nUser question: ${message}`;
+    systemPrompt += `\nUser's question: ${message}`;
 
-    // If we have an image, include it in the request
+    // Build content parts array
     const contentParts: any[] = [systemPrompt];
     
+    // Add main analyzed image if available
     if (imageBase64 && analysisContext) {
       contentParts.push({
         inlineData: {
           data: imageBase64,
           mimeType: "image/jpeg",
         },
+      });
+    }
+
+    // Add additional uploaded images (works with or without analysis)
+    if (additionalImages && additionalImages.length > 0) {
+      additionalImages.forEach((img) => {
+        contentParts.push({
+          inlineData: {
+            data: img,
+            mimeType: "image/jpeg",
+          },
+        });
       });
     }
 

@@ -26,6 +26,9 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastImageRef = useRef<string | null>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,22 +38,19 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
     scrollToBottom();
   }, [messages]);
 
-  // Update welcome message when analysis is available
+  // Send automatic message when new image is analyzed
   useEffect(() => {
-    if (analysisResult && imageBase64) {
+    if (analysisResult && imageBase64 && imageBase64 !== lastImageRef.current) {
+      lastImageRef.current = imageBase64;
+      
       const contextMessage: Message = {
-        id: "analysis-context",
+        id: `analysis-context-${Date.now()}`,
         role: "assistant",
-        content: `I can see you've taken an image! The analysis shows: ${analysisResult.summary}. Feel free to ask me any questions about this image or general skin care advice.`,
+        content: `I've analyzed your image. Here's what I see: ${analysisResult.summary}\n\nRisk level: ${analysisResult.risk_level}\nLikely categories: ${analysisResult.likely_categories.join(", ")}\n\nWhat would you like to know more about?`,
         timestamp: new Date(),
       };
-      setMessages((prev) => {
-        // Check if we already added the context message
-        if (prev.some(msg => msg.id === "analysis-context")) {
-          return prev;
-        }
-        return [...prev, contextMessage];
-      });
+      
+      setMessages((prev) => [...prev, contextMessage]);
     }
   }, [analysisResult, imageBase64]);
 
@@ -69,6 +69,17 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
     setLoading(true);
 
     try {
+      // Prepare images to send
+      const imagesToSend = uploadedImages.length > 0 ? uploadedImages : (imageBase64 ? [imageBase64] : []);
+
+      // Build conversation history (last 10 messages for context)
+      const conversationHistory = messages
+        .slice(-10)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,6 +87,8 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
           message: input.trim(),
           imageBase64: imageBase64,
           analysisContext: analysisResult,
+          additionalImages: imagesToSend,
+          conversationHistory: conversationHistory,
         }),
       });
 
@@ -104,6 +117,53 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function handleChatFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      const errorMsg: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "Please upload an image file (JPEG, PNG, etc.)",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      const base64Data = base64.split(',')[1];
+      
+      setUploadedImages((prev) => [...prev, base64Data]);
+      
+      const confirmMsg: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "📎 Image uploaded! I can now reference this additional image in our conversation.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, confirmMsg]);
+    };
+    reader.onerror = () => {
+      const errorMsg: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "Failed to read the image file. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    if (event.target) {
+      event.target.value = '';
     }
   }
 
@@ -155,6 +215,32 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
       </div>
 
       <div className="chat-input-container">
+        <button
+          className="chat-attach-btn"
+          onClick={() => chatFileInputRef.current?.click()}
+          disabled={loading}
+          title="Upload additional image"
+        >
+          <svg 
+            width="18" 
+            height="18" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+          </svg>
+        </button>
+        <input
+          ref={chatFileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleChatFileUpload}
+          style={{ display: 'none' }}
+        />
         <textarea
           className="chat-input"
           value={input}
@@ -172,6 +258,18 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
           {loading ? "..." : "Send"}
         </button>
       </div>
+
+      {uploadedImages.length > 0 && (
+        <div className="uploaded-images-indicator">
+          📷 {uploadedImages.length} additional image{uploadedImages.length > 1 ? 's' : ''} attached
+          <button 
+            className="clear-images-btn"
+            onClick={() => setUploadedImages([])}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="chat-disclaimer">
         ⚠️ Not medical advice. Consult a dermatologist for concerns.
