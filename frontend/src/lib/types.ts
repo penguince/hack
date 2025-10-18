@@ -11,3 +11,11 @@ export type AnalyzeResponse = {
   risk_level: "low" | "medium" | "high";
   next_steps: string[]; // actionable, non-diagnostic
 };
+
+export type Hospital = {
+  name: string;
+  address: string;
+  distance: number; // in kilometers
+  googleMapsUrl: string;
+  placeId: string;
+};

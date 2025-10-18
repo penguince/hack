@@ -255,6 +255,114 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// Nearby hospitals endpoint
+app.post("/api/nearby-hospitals", async (req, res) => {
+  try {
+    const { latitude, longitude, radius = 5000 } = z.object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+      radius: z.number().min(100).max(50000).optional(),
+    }).parse(req.body);
+
+    const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+    
+    if (!googleMapsApiKey) {
+      return res.status(503).json({
+        error: "Google Maps API key not configured. Please add GOOGLE_MAPS_API_KEY to your environment variables.",
+      });
+    }
+
+    console.log(`🏥 Searching for hospitals near ${latitude},${longitude} within ${radius}m`);
+
+    // Call Google Places API (New) - Nearby Search
+    const placesUrl = "https://places.googleapis.com/v1/places:searchNearby";
+    
+    const requestBody = {
+      includedTypes: ["hospital", "doctor"],
+      maxResultCount: 10,
+      locationRestriction: {
+        circle: {
+          center: {
+            latitude: latitude,
+            longitude: longitude
+          },
+          radius: radius
+        }
+      }
+    };
+
+    const response = await fetch(placesUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": googleMapsApiKey,
+        "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location,places.id"
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data: any = await response.json();
+
+    if (!response.ok) {
+      console.error("Google Places API error:", data.error);
+      return res.status(500).json({
+        error: `Failed to fetch nearby hospitals: ${data.error?.message || response.statusText}`,
+      });
+    }
+
+    // Helper function to calculate distance using Haversine formula
+    function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+      const R = 6371; // Earth's radius in kilometers
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    // Format results from new Places API format
+    const hospitals = (data.places || []).map((place: any) => {
+      const placeLocation = place.location;
+      const placeName = place.displayName?.text || place.displayName || "Unknown";
+      const placeAddress = place.formattedAddress || "Address not available";
+      const placeId = place.id || "";
+      
+      return {
+        name: placeName,
+        address: placeAddress,
+        distance: calculateDistance(
+          latitude,
+          longitude,
+          placeLocation?.latitude || latitude,
+          placeLocation?.longitude || longitude
+        ),
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName)}&query_place_id=${placeId}`,
+        placeId: placeId,
+      };
+    }).sort((a: any, b: any) => a.distance - b.distance); // Sort by distance
+
+    console.log(`✅ Found ${hospitals.length} hospitals`);
+
+    return res.json({ hospitals });
+  } catch (e: any) {
+    console.error("❌ Nearby hospitals error:", e);
+
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({
+        error: "Invalid request data",
+        details: e.errors,
+      });
+    }
+
+    return res.status(500).json({
+      error: "Failed to fetch nearby hospitals",
+    });
+  }
+});
+
 // Image processing endpoint
 app.post("/api/process-image", async (req, res) => {
   try {

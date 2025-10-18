@@ -343,7 +343,6 @@ Set in production:
 GEMINI_API_KEY=production_key
 PORT=8787
 PYTHON_SERVICE_URL=http://python-service:8788
-NODE_ENV=production
 ```
 
 ## 🎓 Resources
