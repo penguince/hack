@@ -11,3 +11,21 @@ export type AnalyzeResponse = {
   risk_level: "low" | "medium" | "high";
   next_steps: string[]; // actionable, non-diagnostic
 };
+
+export type NearbyHospitalsRequest = {
+  latitude: number;
+  longitude: number;
+  radius?: number; // in meters, default 5000
+};
+
+export type Hospital = {
+  name: string;
+  address: string;
+  distance: number; // in kilometers
+  googleMapsUrl: string;
+  placeId: string;
+};
+
+export type NearbyHospitalsResponse = {
+  hospitals: Hospital[];
+};

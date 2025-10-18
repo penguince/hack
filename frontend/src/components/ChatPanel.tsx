@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import type { AnalyzeResponse } from "../lib/types";
+import type { AnalyzeResponse, Hospital } from "../lib/types";
 import "../styles/ChatPanel.css";
 
 interface Message {
@@ -29,6 +29,9 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
   const lastImageRef = useRef<string | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [loadingHospitals, setLoadingHospitals] = useState(false);
+  const [showHospitalPrompt, setShowHospitalPrompt] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -58,6 +61,9 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
       };
       
       setMessages((prev) => [...prev, contextMessage]);
+      
+      // Show hospital prompt after analysis
+      setShowHospitalPrompt(true);
     }
   }, [analysisResult, imageBase64]);
 
@@ -174,6 +180,59 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
     }
   }
 
+  async function fetchNearbyHospitals() {
+    setLoadingHospitals(true);
+    setShowHospitalPrompt(false);
+
+    try {
+      // Request user's location
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // Fetch nearby hospitals from backend
+      const response = await fetch("/api/nearby-hospitals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude, longitude, radius: 5000 }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch hospitals");
+      }
+
+      setHospitals(data.hospitals);
+
+      const hospitalMessage: Message = {
+        id: `hospitals-${Date.now()}`,
+        role: "assistant",
+        content: data.hospitals.length > 0
+          ? `I found ${data.hospitals.length} dermatology clinic${data.hospitals.length > 1 ? 's' : ''} near you:`
+          : "I couldn't find any dermatology clinics nearby. Try searching for general hospitals or expanding the search radius.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, hospitalMessage]);
+    } catch (error: any) {
+      console.error("Error fetching hospitals:", error);
+      
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: error.message === "User denied Geolocation"
+          ? "I need your location permission to find nearby clinics. Please allow location access and try again."
+          : "Sorry, I couldn't fetch nearby clinics. Please try again later.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setLoadingHospitals(false);
+    }
+  }
+
   function handleKeyPress(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -218,6 +277,59 @@ export default function ChatPanel({ analysisResult, imageBase64 }: ChatPanelProp
             </div>
           </div>
         )}
+        
+        {/* Hospital prompt */}
+        {showHospitalPrompt && (
+          <div className="hospital-prompt">
+            <button 
+              className="close-hospital-prompt"
+              onClick={() => setShowHospitalPrompt(false)}
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            <p>🏥 Would you like to find nearby dermatology clinics?</p>
+            <button 
+              className="btn-find-hospitals"
+              onClick={fetchNearbyHospitals}
+              disabled={loadingHospitals}
+            >
+              {loadingHospitals ? "Finding clinics..." : "Find nearby clinics"}
+            </button>
+          </div>
+        )}
+
+        {/* Hospital list */}
+        {hospitals.length > 0 && (
+          <div className="hospital-list">
+            <div className="hospital-list-header">
+              <h3>Nearby Clinics</h3>
+              <button 
+                className="close-hospital-list"
+                onClick={() => setHospitals([])}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            {hospitals.map((hospital) => (
+              <div key={hospital.placeId} className="hospital-card">
+                <h4 className="hospital-name">{hospital.name}</h4>
+                <p className="hospital-distance">{hospital.distance.toFixed(1)} km away</p>
+                <p className="hospital-address">{hospital.address}</p>
+                <a 
+                  href={hospital.googleMapsUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hospital-link"
+                >
+                  View in Google Maps →
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 

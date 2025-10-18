@@ -140,5 +140,5 @@ todo:
 4. OpenCV ✅
 5. prompt tune ✅
 6. deploy (optional)
-7. Probability
-8. Hospital
+7. Probability ✅
+8. Hospital 
