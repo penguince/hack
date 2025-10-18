@@ -109,8 +109,8 @@ def analyze_quality(base64_string: str) -> Dict:
     # Determine if image quality is good
     is_good = (
         50 < brightness < 200 and  # Not too dark or bright
-        contrast > 30 and          # Sufficient contrast
-        sharpness > 100            # Not too blurry
+        contrast > 30 and # 30 and          # Sufficient contrast
+        sharpness > 45#100            # Not too blurry
     )
     
     quality_info = {
