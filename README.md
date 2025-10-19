@@ -1,5 +1,4 @@
-# SkinSight Live - Skin Analysis Application
-
+# Skinalyze - Analyze Your Skin
 Privacy-first skin analysis application powered by AI and Python OpenCV image processing.
 
 ## 🏗️ Architecture
@@ -131,14 +130,14 @@ hack/
 
 ---
 
-**Privacy First**: No data is stored. Everything happens in memory.
+**Privacy First**: No data is stored serverside. Everything is processed in the backend.
 
 todo:
 1. Chatbot ✅
 2. File Upload ✅
-3. Landing page 
+3. Landing page ✅
 4. OpenCV ✅
 5. prompt tune ✅
-6. deploy (optional)
+6. deploy (optional) 
 7. Probability ✅
-8. Hospital 
+8. Hospital ✅
