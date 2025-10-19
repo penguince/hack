@@ -89,8 +89,8 @@ export default function Home({ onStart }: LandingPageProps) {
       <div className="hero">
         <h1 className="title">Skinalyze</h1>
         <p className="lead">
-          AI-powered skin disease detection through image analysis. Upload a photo or use your camera
-          to get instant skin condition insights
+          AI-powered skin disease detection tool through image analysis. Upload a photo or use your camera
+          to get instant skin condition insights!
         </p>
 
         <div className="badges">
@@ -128,7 +128,7 @@ export default function Home({ onStart }: LandingPageProps) {
 
       <div className="card wide">
         <div className="center stack-24">
-          <h2 className="section-title">About US</h2>
+          <h2 className="section-title">About Us</h2>
           <div className="section-rule"></div>
 
           <p
@@ -141,7 +141,7 @@ export default function Home({ onStart }: LandingPageProps) {
               color: "#334155",
             }}
           >
-            We're democratizing access to skin health insights through cutting-edge AI technology. Our
+            We're democratizing access to skin health insights through cutting-edge AI and computer vision technology. Our
             mission is to provide early detection and awareness of skin conditions, making
             dermatological screening accessible to everyone, anywhere.
           </p>
@@ -188,7 +188,7 @@ export default function Home({ onStart }: LandingPageProps) {
           <div className="feature">
             <div className="icon">📸</div>
             <h4>Image Analysis</h4>
-            <p>Upload photos for instant AI-powered skin condition analysis with 95% accuracy</p>
+            <p>Upload photos for instant AI-powered skin condition analysis with extremely high accuracy</p>
             <div style={{ marginTop: ".75rem", color: "#2563eb", fontWeight: 700 }}>⚡ Instant Results</div>
           </div>
 
@@ -236,7 +236,7 @@ export default function Home({ onStart }: LandingPageProps) {
             <div>
               <h3 style={{ margin: "0 0 .5rem 0", fontSize: 20, color: "#111827" }}>AI Analysis</h3>
               <p className="help" style={{ marginBottom: "1rem" }}>
-                Our advanced AI algorithms will analyze your image within seconds, identifying potential skin
+                Our advanced AI will analyze your image within seconds, identifying potential skin
                 conditions, analyzing texture, pigmentation, and other important factors.
               </p>
               <div className="tip"><strong>Processing:</strong> Analysis typically takes 2–5 seconds.</div>
@@ -252,7 +252,7 @@ export default function Home({ onStart }: LandingPageProps) {
                 Review your personalized analysis report including potential conditions identified, confidence
                 levels, and recommended next steps or skincare advice.
               </p>
-              <div className="tip"><strong>Remember:</strong> This is for informational purposes only. Consult a dermatologist for medical advice.</div>
+              <div className="tip"><strong>Disclaimer:</strong> Report is for informational purposes only. Consult a dermatologist for medical advice.</div>
             </div>
           </div>
         </div>
